@@ -1,28 +1,55 @@
 #! /bin/bash
 
-PSQL="psql --username=freecodecamp --dbname=<database_name> -t --no-align -c"
+PSQL="psql --username=freecodecamp --dbname=periodic_table -t --no-align -c"
 
 if [[ $# -eq 0 ]]
 then
   echo "Please provide an element as an argument."
 else
-  # is argument an atomic number
   if [[ $1 =~ ^[0-9]+$ ]]
   then
-    ATOMIC_NUM_RESULT=$($PSQL "SELECT * FROM elements INNER JOIN properties USING(atomic_number) WHERE atomic_number = $1")
-    echo $ATOMIC_NUM_RESULT
-    # get info from atomic number (name, symbol, type, atomic mass, melting point, boiling point)
-  elif [[ $1 =~ ^[A-Z][a-z]$ ]]
+    ATOMIC_NUM=$($PSQL "SELECT atomic_number FROM elements WHERE atomic_number = $1")
+    if [[ -z $ATOMIC_NUM ]]
+    then
+      echo -e "I could not find that element in the database."
+    else
+      NAME=$($PSQL "SELECT name FROM elements WHERE atomic_number = $1")
+      SYMBOL=$($PSQL "SELECT symbol FROM elements WHERE atomic_number = $1")
+      TYPE=$($PSQL "SELECT type FROM properties INNER JOIN types USING(type_id) WHERE atomic_number = $1")
+      MASS=$($PSQL "SELECT atomic_mass FROM properties WHERE atomic_number = $1")
+      MELTING_POINT=$($PSQL "SELECT melting_point_celsius FROM properties WHERE atomic_number = $1")
+      BOILING_POINT=$($PSQL "SELECT boiling_point_celsius FROM properties WHERE atomic_number = $1")
+      echo "The element with atomic number $ATOMIC_NUM is $NAME ($SYMBOL). It's a $TYPE, with a mass of $MASS amu. $NAME has a melting point of $MELTING_POINT celsius and a boiling point of $BOILING_POINT celsius."
+    fi
+  elif [[ $1 =~ ^[A-Z][a-z]?$ ]]
   then
-    SYMBOL_RESULT=$($PSQL "SELECT * FROM elements INNER JOIN properties USING(atomic_number) WHERE symbol = '$1")
-    echo $SYMBOL_RESULT
+    SYMBOL=$($PSQL "SELECT symbol FROM elements WHERE symbol = '$1'")
+    if [[ -z $SYMBOL ]]
+    then
+      echo -e "I could not find that element in the database."
+    else
+      ATOMIC_NUM=$($PSQL "SELECT atomic_number FROM elements WHERE symbol = '$1'")
+      NAME=$($PSQL "SELECT name FROM elements WHERE symbol = '$1'")
+      TYPE=$($PSQL "SELECT type FROM elements INNER JOIN properties USING(atomic_number) INNER JOIN types USING(type_id) WHERE symbol = '$1'")
+      MASS=$($PSQL "SELECT atomic_mass FROM properties INNER JOIN elements USING(atomic_number) WHERE symbol = '$1'")
+      MELTING_POINT=$($PSQL "SELECT melting_point_celsius FROM properties INNER JOIN elements USING(atomic_number) WHERE symbol = '$1'")
+      BOILING_POINT=$($PSQL "SELECT boiling_point_celsius FROM properties INNER JOIN elements USING(atomic_number) WHERE symbol = '$1'")
+      echo -e "The element with atomic number $ATOMIC_NUM is $NAME ($SYMBOL). It's a $TYPE, with a mass of $MASS amu. $NAME has a melting point of $MELTING_POINT celsius and a boiling point of $BOILING_POINT celsius."
+    fi
   elif [[ $1 =~ ^[A-Z] ]]
   then
-    NAME_RESULT=$($PSQL "SELECT * FROM elements INNER JOIN properties USING(atomic_number) WHERE name = '$1")
-    echo $NAME_RESULT
+    NAME=$($PSQL "SELECT name FROM elements WHERE name = '$1'")
+    if [[ -z $NAME ]]
+    then
+      echo -e "I could not find that element in the database."
+    else
+      ATOMIC_NUM=$($PSQL "SELECT atomic_number FROM elements WHERE name = '$1'")
+      SYMBOL=$($PSQL "SELECT symbol FROM elements WHERE name = '$1'")
+      TYPE=$($PSQL "SELECT type FROM elements INNER JOIN properties USING(atomic_number) INNER JOIN types USING(type_id) WHERE name = '$1'")
+      MASS=$($PSQL "SELECT atomic_mass FROM properties INNER JOIN elements USING(atomic_number) WHERE name = '$1'")
+      MELTING_POINT=$($PSQL "SELECT melting_point_celsius FROM properties INNER JOIN elements USING(atomic_number) WHERE name = '$1'")
+      BOILING_POINT=$($PSQL "SELECT boiling_point_celsius FROM properties INNER JOIN elements USING(atomic_number) WHERE name = '$1'")
+      echo "The element with atomic number $ATOMIC_NUM is $NAME ($SYMBOL). It's a $TYPE, with a mass of $MASS amu. $NAME has a melting point of $MELTING_POINT celsius and a boiling point of $BOILING_POINT celsius."
+    fi
   fi
 fi
-
-# The element with atomic number 1 is Hydrogen (H). It's a nonmetal, with a mass of 1.008 amu. Hydrogen has a melting point of -259.1 celsius and a boiling point of -252.9 celsius.
-# elements table has atomic_number, symbol, and name
-# properties table has atomic_number, type, atomic_mass, melting_point_celcius, boiling_point_celcius
